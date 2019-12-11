@@ -5,6 +5,8 @@
 import {Component} from 'react';
 import * as bms from 'bms';
 import toWav from 'audiobuffer-to-wav';
+import {resolve} from 'any-promise';
+import {decode} from 'punycode';
 
 const Bouncer = async (reader, title, files, nameView) => {
   const bin = reader.result;
@@ -12,15 +14,17 @@ const Bouncer = async (reader, title, files, nameView) => {
   const notes = bms.Notes.fromBMSChart(compiled.chart);
   const sounds = bms.Keysounds.fromBMSChart(compiled.chart);
   const bpm = compiled.chart.headers.get('bpm');
+
+  const beat2Frame = (beat) => (beat / bpm) * 60 * 44100;
+
   const lastNote = notes.all()[notes.count() - 1];
-  const songLength =
-    (((lastNote.endBeat || lastNote.beat) + 4) / bpm) * 60 * 44100;
+  const songLength = beat2Frame((lastNote.endBeat || lastNote.beat) + 4);
   const soundCache = {},
+    soundLoaders = [],
     decoder = new AudioContext(),
     ctx = new OfflineAudioContext(2, songLength, 44100);
   for (const note of notes.all()) {
-    const sound = sounds.get(note.keysound.replace('.ogg', '.wav'));
-    console.log(note.keysound, sound);
+    const sound = sounds.get(note.keysound.replace(/.ogg$/, '.wav'));
     if (sound === undefined) {
       if (
         window.confirm(
@@ -31,30 +35,54 @@ const Bouncer = async (reader, title, files, nameView) => {
       nameView('中断');
       return;
     }
-    const soundFile = soundCache[sound.split('.')[0]];
-    if (soundFile === undefined) {
-      const soundReader = new FileReader();
-      soundCache[sound.split('.')[0]] = new Promise((resolve) => {
-        soundReader.onload = () => {
-          nameView(sound);
-          const buf = decoder.decodeAudioData(soundReader.result);
-          const source = ctx.createBufferSource();
-          source.src = buf;
-          source.connect(ctx.destination);
-          const offset = (note.beat / bpm) * 60 * 44100;
-          source.start(offset);
-          resolve();
-        };
-        soundReader.readAsArrayBuffer(files[sound.split('.')[0]]);
-      });
+    const soundName = sound.split('.')[0];
+    if (soundCache[soundName] === undefined) {
+      soundLoaders.push(
+        new Promise((resolve) => {
+          const soundReader = new FileReader();
+          soundReader.onload = async () => {
+            nameView(sound);
+            const wav = await decoder.decodeAudioData(soundReader.result);
+            soundCache[soundName] = wav;
+            resolve();
+          };
+          soundReader.readAsArrayBuffer(files[sound.split('.')[0]]);
+        })
+      );
     }
   }
+  nameView('キー音読み出し中……');
+  await Promise.all(soundLoaders);
+
+  const soundRings = [];
+  for (const note of notes.all()) {
+    soundRings.push(async () => {
+      const sound = sounds.get(note.keysound.replace(/.ogg$/, '.wav'));
+      if (sound === undefined) return;
+      const soundName = sound.split('.')[0];
+
+      nameView('合成中…… ' + soundName);
+      const buf = soundCache[soundName];
+      const source = ctx.createBufferSource();
+      source.buffer = buf;
+      source.connect(ctx.destination);
+      const startFrame = beat2Frame(note.beat);
+      source.start(startFrame);
+    });
+  }
   nameView('合成中……');
-  await Promise.all(Object.values(soundCache));
+  await Promise.all(soundRings);
   nameView('Wav (PCM) に変換中……');
   const rendered = await ctx.startRendering();
+
+  const speaker = new window.AudioContext();
+  const toListen = speaker.createBufferSource();
+  toListen.buffer = rendered;
+  toListen.connect(speaker.destination);
+  toListen.start();
+
   nameView('完了');
-  const buf = new Uint8Array(toWav(rendered));
+  const buf = new Uint8Array(toWav(rendered, {float32: true}));
   const downloader = document.createElement('a');
   downloader.download = title.split('.')[0] + '.wav';
   downloader.href = URL.createObjectURL(new Blob([buf]));
