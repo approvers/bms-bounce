@@ -1,16 +1,22 @@
 {
-  "name": "create-next-example-app",
+  "name": "bms-bounce",
+  "version": "0.1.0",
+  "private": true,
+  "author": "MikuroXina <ryosukadnak@gmail.com>",
+  "license": "Apache-2.0",
   "scripts": {
     "dev": "next",
+    "prebuild": "cd bms-rs-wasm && wasm-pack build",
     "build": "next build",
     "start": "next start"
   },
   "dependencies": {
     "audiobuffer-to-wav": "^1.0.0",
-    "bms": "^3.1.0-2",
-    "next": "^9.3.2",
-    "react": "^16.8.3",
-    "react-dom": "^16.8.3"
+    "next": "^12.0.7",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
   },
-  "license": "Apache-2.0"
+  "devDependencies": {
+    "@babel/core": "^7.0.0-0"
+  }
 }
