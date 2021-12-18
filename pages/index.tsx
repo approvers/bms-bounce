@@ -2,6 +2,16 @@ import { ChangeEvent, useState } from "react";
 import { NextPage } from "next";
 import toWav from "audiobuffer-to-wav";
 
+const forEachChannel = (
+  buf: AudioBuffer,
+  f: (arr: Float32Array, channel: number) => void,
+) => {
+  for (let channel = 0; channel < buf.numberOfChannels; ++channel) {
+    const arr = buf.getChannelData(channel);
+    f(arr, channel);
+  }
+};
+
 const bounce = async (
   source: string,
   filename: string,
@@ -14,6 +24,7 @@ const bounce = async (
   const ctx = new AudioContext();
   const sampleRate = 44100;
   const buf = ctx.createBuffer(2, lengthSeconds * sampleRate, sampleRate);
+  const audioSeconds = bms.audio_play_seconds();
   // const notes = bms.Notes.fromBMSChart(compiled.chart);
   // const sounds = bms.Keysounds.fromBMSChart(compiled.chart);
   // const bpm = compiled.chart.headers.get("bpm");

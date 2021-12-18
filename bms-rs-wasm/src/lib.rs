@@ -10,6 +10,7 @@ use bms_rs::{
         Bms,
     },
 };
+use js_sys::Array;
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 
@@ -36,15 +37,33 @@ impl BmsData {
         self.audio_lengths.insert(filename.into(), length);
     }
 
+    pub fn audio_play_seconds(&self) -> Array {
+        let res = Array::new_with_length(self.bms.notes.all_notes().count() as u32);
+        let mut index = 0;
+        self.process_notes(|filename, obj_start_seconds| {
+            let pair = Array::new_with_length(2);
+            pair.set(0, filename.into());
+            pair.set(1, obj_start_seconds.into());
+            res.set(index, pair.into());
+            index += 1;
+        });
+        res
+    }
+
     pub fn length_seconds(&self) -> f64 {
         let mut length_seconds = 0.0f64; // includes sound tail
-        self.process_notes(|_, end_seconds| length_seconds = length_seconds.max(end_seconds));
+        self.process_notes(|filename, obj_start_seconds| {
+            let sound_seconds = self.audio_lengths[filename];
+            let obj_end_seconds = obj_start_seconds + sound_seconds;
+
+            length_seconds = length_seconds.max(obj_end_seconds);
+        });
         length_seconds
     }
 }
 
 impl BmsData {
-    fn process_notes(&self, mut f: impl FnMut(f64, f64)) {
+    fn process_notes(&self, mut f: impl FnMut(&str, f64)) {
         let mut current_section_time = 0.0;
         let mut next_section_time = 0.0;
         let mut previous_section = 0;
@@ -81,10 +100,9 @@ impl BmsData {
                 previous_section = track;
             }
             let obj_offset_seconds = section_seconds * numerator as f64 / denominator as f64;
-            let sound_seconds = self.audio_lengths[filename];
             let obj_start_seconds = current_section_time + obj_offset_seconds;
-            let obj_end_seconds = obj_start_seconds + sound_seconds;
-            f(obj_start_seconds, obj_end_seconds);
+
+            f(filename, obj_start_seconds);
 
             next_section_time = current_section_time + section_seconds;
             if let Some((_, &BpmChangeObj { bpm: first_bpm, .. })) =
