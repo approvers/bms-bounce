@@ -8,8 +8,12 @@ const bounce = async (
   files: Readonly<Record<string, Blob>>,
   nameView: (message: string) => void,
 ) => {
-  const { parse_bms } = await import("../bms-rs-wasm/pkg/bms_rs_wasm");
-  const bms = parse_bms(source, { free: () => {} });
+  const { BmsData } = await import("../bms-rs-wasm/pkg/bms_rs_wasm");
+  const bms = new BmsData(source, { free: () => {} });
+  const lengthSeconds = bms.length_seconds();
+  const ctx = new AudioContext();
+  const sampleRate = 44100;
+  const buf = ctx.createBuffer(2, lengthSeconds * sampleRate, sampleRate);
   // const notes = bms.Notes.fromBMSChart(compiled.chart);
   // const sounds = bms.Keysounds.fromBMSChart(compiled.chart);
   // const bpm = compiled.chart.headers.get("bpm");
