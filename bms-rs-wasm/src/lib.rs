@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 use bms_rs::{
     lex::parse,
     parse::{
@@ -36,6 +39,7 @@ impl BmsData {
     pub fn length_seconds(&self) -> f64 {
         let mut length_seconds = 0.0f64; // includes sound tail
         let mut current_section_time = 0.0;
+        let mut next_section_time = 0.0;
         let mut previous_section = 0;
         const DEFAULT_BPM: f64 = 130.0; // Defined on the BMS specification.
         let mut current_bpm = self.bms.header.bpm.unwrap_or(DEFAULT_BPM);
@@ -66,7 +70,7 @@ impl BmsData {
             let seconds_per_beat = 60.0 / current_bpm;
             let section_seconds = sections_beats * seconds_per_beat;
             if previous_section < track {
-                current_section_time += section_seconds;
+                current_section_time = next_section_time;
                 previous_section = track;
             }
             let obj_offset_seconds = section_seconds * numerator as f64 / denominator as f64;
@@ -74,6 +78,7 @@ impl BmsData {
             let obj_end_seconds = current_section_time + obj_offset_seconds + sound_seconds;
             length_seconds = length_seconds.max(obj_end_seconds);
 
+            next_section_time = current_section_time + section_seconds;
             if let Some((_, &BpmChangeObj { bpm: first_bpm, .. })) =
                 bpm_changes.range(offset..).next()
             {
