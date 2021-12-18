@@ -52,26 +52,32 @@ const bounce = async (
   downloader.click();
 };
 
+const extractSoundFiles = (files: FileList): Record<string, Blob> =>
+  Object.values(files).reduce(
+    (prev, curr) => ({ ...prev, [curr.name]: curr }),
+    {},
+  );
+
+const firstBmsIndex = (files: FileList) =>
+  Object.keys(files).filter((key) => {
+    const exts = files[key].name.split(".");
+    const ext = exts[exts.length - 1];
+    return ["bms", "bme", "bml", "pms"].includes(ext);
+  })[0];
+
 const fileHandler =
   (setBouncing: (v: boolean) => void, setLoadingName: (v: string) => void) =>
   (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (4 < files.length) {
       setBouncing(true);
-      const soundFiles: Record<string, Blob> = {};
-      const firstBMSIndex = Object.keys(files).filter((key) => {
-        soundFiles[files[key].name.split(".")[0]] = files[key];
-        const exts = files[key].name.split(".");
-        const ext = exts[exts.length - 1];
-        return ["bms", "bme", "bml", "pms"].includes(ext);
-      })[0];
-      const bms = files[firstBMSIndex];
+      const soundFiles: Record<string, Blob> = extractSoundFiles(files);
+      const bms = files[firstBmsIndex(files)];
       const reader = new FileReader();
       reader.onload = (e) => {
-        bounce(e.target.result as string, bms.name, soundFiles, (name) => {
-          setBouncing(true);
-          setLoadingName(name);
-        }).finally(() => setBouncing(false));
+        bounce(e.target.result as string, bms.name, soundFiles, (name) =>
+          setLoadingName(name),
+        ).finally(() => setBouncing(false));
       };
       reader.readAsText(bms);
     }
