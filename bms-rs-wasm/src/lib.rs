@@ -38,6 +38,13 @@ impl BmsData {
 
     pub fn length_seconds(&self) -> f64 {
         let mut length_seconds = 0.0f64; // includes sound tail
+        self.process_notes(|_, end_seconds| length_seconds = length_seconds.max(end_seconds));
+        length_seconds
+    }
+}
+
+impl BmsData {
+    fn process_notes(&self, mut f: impl FnMut(f64, f64)) {
         let mut current_section_time = 0.0;
         let mut next_section_time = 0.0;
         let mut previous_section = 0;
@@ -75,8 +82,9 @@ impl BmsData {
             }
             let obj_offset_seconds = section_seconds * numerator as f64 / denominator as f64;
             let sound_seconds = self.audio_lengths[filename];
-            let obj_end_seconds = current_section_time + obj_offset_seconds + sound_seconds;
-            length_seconds = length_seconds.max(obj_end_seconds);
+            let obj_start_seconds = current_section_time + obj_offset_seconds;
+            let obj_end_seconds = obj_start_seconds + sound_seconds;
+            f(obj_start_seconds, obj_end_seconds);
 
             next_section_time = current_section_time + section_seconds;
             if let Some((_, &BpmChangeObj { bpm: first_bpm, .. })) =
@@ -85,7 +93,6 @@ impl BmsData {
                 current_bpm = first_bpm;
             }
         }
-        length_seconds
     }
 }
 
