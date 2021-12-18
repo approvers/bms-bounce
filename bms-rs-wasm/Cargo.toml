@@ -10,5 +10,5 @@ wasm-opt = false
 crate-type = ["cdylib"]
 
 [dependencies]
-bms-rs = "0.1.0"
+bms-rs = "0.1.1"
 wasm-bindgen = "0.2.78"
