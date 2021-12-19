@@ -37,13 +37,15 @@ const bounce = async (
 
   const ctx = new AudioContext();
   const audioCache: Record<string, AudioBuffer> = {};
-  for (const [filename, file] of Object.entries(files)) {
-    if (isAudioFilename(filename) && !audioCache[filename]) {
-      const audio = await ctx.decodeAudioData(await file.arrayBuffer());
-      bms.add_audio_length(filename, audio.duration);
-      audioCache[filename] = audio;
-    }
-  }
+  await Promise.all(
+    Object.entries(files).map(async ([filename, file]) => {
+      if (isAudioFilename(filename) && !audioCache[filename]) {
+        const audio = await ctx.decodeAudioData(await file.arrayBuffer());
+        bms.add_audio_length(filename, audio.duration);
+        audioCache[filename] = audio;
+      }
+    }),
+  );
 
   const lengthSeconds = bms.length_seconds();
   const buf = ctx.createBuffer(2, lengthSeconds * sampleRate, sampleRate);
