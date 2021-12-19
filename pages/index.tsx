@@ -30,6 +30,7 @@ const bounce = async (
   files: Readonly<Record<string, Blob>>,
   nameView: (message: string) => void,
 ) => {
+  nameView("WAV 読込中");
   const { BmsData, RandomConfig } = await import(
     "../bms-rs-wasm/pkg/bms_rs_wasm"
   );
@@ -47,15 +48,15 @@ const bounce = async (
     }),
   );
 
+  nameView("変換中");
   const lengthSeconds = bms.length_seconds();
   const buf = ctx.createBuffer(2, lengthSeconds * sampleRate, sampleRate);
   const audioSeconds: [string, number][] = bms.audio_play_seconds();
   for (const [filename, seconds] of audioSeconds) {
-    nameView(filename);
     const audio = audioCache[filename];
     writeBuffer(audio, buf, secondsToIndex(seconds));
   }
-  nameView("WAV に変換完了");
+  nameView("変換完了");
 
   const rendered = new Uint8Array(toWav(buf, { float32: true }));
   const downloader = document.createElement("a");
