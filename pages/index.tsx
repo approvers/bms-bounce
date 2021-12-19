@@ -81,6 +81,7 @@ const fileHandler =
           setLoadingName(name),
         );
       } catch (e) {
+        console.error(e);
         setLoadingName(`${e}`);
       } finally {
         setBouncing(false);
