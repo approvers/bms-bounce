@@ -12,7 +12,7 @@ const writeBuffer = (
     const dstArray = dst.getChannelData(channel);
     const srcArray = src.getChannelData(isSrcSingle ? 0 : channel);
     for (let index = 0; index < srcArray.length; ++index) {
-      dstArray[index + offsetIndex] = srcArray[index];
+      dstArray[index + offsetIndex] += srcArray[index];
     }
   }
 };
