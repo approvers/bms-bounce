@@ -78,7 +78,16 @@ impl BmsData {
         {
             current_bpm = first_bpm;
         }
-        for &Obj { offset, obj, .. } in notes.all_notes() {
+        for (offset, obj) in notes
+            .bgms()
+            .iter()
+            .flat_map(|(&offset, objs)| objs.iter().map(move |&obj| (offset, obj)))
+            .chain(
+                notes
+                    .all_notes()
+                    .map(|&Obj { offset, obj, .. }| (offset, obj)),
+            )
+        {
             let ObjTime {
                 track,
                 numerator,
