@@ -10,6 +10,7 @@ use bms_rs::{
         Bms,
     },
 };
+use itertools::Itertools;
 use js_sys::Array;
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
@@ -87,6 +88,7 @@ impl BmsData {
                     .all_notes()
                     .map(|&Obj { offset, obj, .. }| (offset, obj)),
             )
+            .sorted_by(|a, b| a.0.cmp(&b.0))
         {
             let ObjTime {
                 track,
