@@ -20,6 +20,9 @@ const sampleRate = 44100;
 
 const secondsToIndex = (seconds: number) => Math.round(seconds * sampleRate);
 
+const isAudioFilename = (filename: string) =>
+  filename.endsWith(".wav") || filename.endsWith(".ogg");
+
 const bounce = async (
   source: string,
   filename: string,
@@ -30,18 +33,22 @@ const bounce = async (
     "../bms-rs-wasm/pkg/bms_rs_wasm"
   );
   const bms = new BmsData(source, new RandomConfig(true));
-  const lengthSeconds = bms.length_seconds();
+
   const ctx = new AudioContext();
+  const audioCache: Record<string, AudioBuffer> = {};
+  for (const [filename, file] of Object.entries(files)) {
+    if (isAudioFilename(filename) && !audioCache[filename]) {
+      const audio = await ctx.decodeAudioData(await file.arrayBuffer());
+      bms.add_audio_length(filename, audio.duration);
+      audioCache[filename] = audio;
+    }
+  }
+
+  const lengthSeconds = bms.length_seconds();
   const buf = ctx.createBuffer(2, lengthSeconds * sampleRate, sampleRate);
   const audioSeconds: [string, number][] = bms.audio_play_seconds();
-  const audioCache: Record<string, AudioBuffer> = {};
   for (const [filename, seconds] of audioSeconds) {
     nameView(filename);
-    if (!audioCache[filename]) {
-      audioCache[filename] = await ctx.decodeAudioData(
-        await files[filename].arrayBuffer(),
-      );
-    }
     const audio = audioCache[filename];
     writeBuffer(audio, buf, secondsToIndex(seconds));
   }
