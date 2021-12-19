@@ -5,8 +5,10 @@
   "author": "MikuroXina <ryosukadnak@gmail.com>",
   "license": "Apache-2.0",
   "scripts": {
+    "predev": "yarn wasm",
     "dev": "next",
-    "prebuild": "cd bms-rs-wasm && wasm-pack build",
+    "wasm": "cd bms-rs-wasm && wasm-pack build",
+    "prebuild": "yarn wasm",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
