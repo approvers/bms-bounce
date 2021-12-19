@@ -7,10 +7,11 @@ const writeBuffer = (
   dst: AudioBuffer,
   offsetIndex: number,
 ) => {
+  const isSrcSingle = src.numberOfChannels === 1;
   for (let channel = 0; channel < dst.numberOfChannels; ++channel) {
     const dstArray = dst.getChannelData(channel);
-    const srcArray = src.getChannelData(channel);
-    for (let index = 0; index < srcArray.length; index++) {
+    const srcArray = src.getChannelData(isSrcSingle ? 1 : channel);
+    for (let index = 0; index < srcArray.length; ++index) {
       dstArray[index + offsetIndex] = srcArray[index];
     }
   }
