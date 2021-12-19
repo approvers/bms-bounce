@@ -24,4 +24,14 @@ fn simple() {
     data.add_audio_length("d.wav", 1.5);
     data.add_audio_length("e.wav", 2.0);
     assert_eq!(data.length_seconds(), 8.0);
+    assert_eq!(
+        data.process_notes().collect::<Vec<_>>(),
+        vec![
+            ("a.wav", 0.0),
+            ("b.wav", 2.0),
+            ("c.wav", 4.0),
+            ("d.wav", 5.0),
+            ("e.wav", 6.0),
+        ]
+    );
 }
