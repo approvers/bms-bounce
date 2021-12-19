@@ -115,4 +115,15 @@ impl BmsData {
 }
 
 #[wasm_bindgen]
-pub struct RandomConfig {}
+#[derive(Debug, Default)]
+pub struct RandomConfig {
+    use_actual_random: bool,
+}
+
+#[wasm_bindgen]
+impl RandomConfig {
+    #[wasm_bindgen(constructor)]
+    pub fn new(use_actual_random: bool) -> Self {
+        Self { use_actual_random }
+    }
+}

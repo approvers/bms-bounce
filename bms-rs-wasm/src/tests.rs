@@ -16,7 +16,7 @@ fn simple() {
         #00311:0304
         #00411:05
         ",
-        RandomConfig {},
+        RandomConfig::default(),
     );
     data.add_audio_length("a.wav", 3.0);
     data.add_audio_length("b.wav", 3.0);

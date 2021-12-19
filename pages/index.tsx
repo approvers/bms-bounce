@@ -26,8 +26,10 @@ const bounce = async (
   files: Readonly<Record<string, Blob>>,
   nameView: (message: string) => void,
 ) => {
-  const { BmsData } = await import("../bms-rs-wasm/pkg/bms_rs_wasm");
-  const bms = new BmsData(source, { free: () => {} });
+  const { BmsData, RandomConfig } = await import(
+    "../bms-rs-wasm/pkg/bms_rs_wasm"
+  );
+  const bms = new BmsData(source, new RandomConfig(true));
   const lengthSeconds = bms.length_seconds();
   const ctx = new AudioContext();
   const buf = ctx.createBuffer(2, lengthSeconds * sampleRate, sampleRate);
