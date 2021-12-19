@@ -90,7 +90,6 @@ const fileHandler =
         );
       } catch (e) {
         console.error(e);
-        setLoadingName(`${e}`);
       } finally {
         setBouncing(false);
       }
