@@ -24,6 +24,37 @@ const secondsToIndex = (seconds: number) => Math.round(seconds * sampleRate);
 const isAudioFilename = (filename: string) =>
   filename.endsWith(".wav") || filename.endsWith(".ogg");
 
+const decodeAudio = async (
+  ctx: AudioContext,
+  filename: string,
+  file: Blob,
+): Promise<AudioBuffer> => {
+  if (filename.endsWith(".wav")) {
+    return await ctx.decodeAudioData(await file.arrayBuffer());
+  }
+  if (filename.endsWith(".ogg")) {
+    const { OggDecoder } = await import("../ogg-wasm/pkg/ogg_wasm");
+    const buf = await file.arrayBuffer();
+    const decoder = new OggDecoder(new Uint8Array(buf));
+    const channels: Float64Array[] = [];
+    while (true) {
+      const channel = decoder.read_next_channel();
+      if (!channel) {
+        break;
+      }
+      channels.push(channel);
+    }
+    const ret = ctx.createBuffer(
+      channels.length,
+      channels[0].length,
+      sampleRate,
+    );
+    channels.forEach((arr, i) => ret.getChannelData(i).set(arr));
+    return ret;
+  }
+  throw new Error("unreachable");
+};
+
 const bounce = async (
   source: string,
   filename: string,
@@ -41,7 +72,7 @@ const bounce = async (
   await Promise.all(
     Object.entries(files).map(async ([filename, file]) => {
       if (isAudioFilename(filename) && !audioCache[filename]) {
-        const audio = await ctx.decodeAudioData(await file.arrayBuffer());
+        const audio = await decodeAudio(ctx, filename, file);
         bms.add_audio_length(filename, audio.duration);
         audioCache[filename] = audio;
       }
