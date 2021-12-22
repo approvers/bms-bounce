@@ -23,8 +23,6 @@ impl OggDecoder {
                 .zip(packet.into_iter())
                 .for_each(|(data, mut packet)| data.append(&mut packet));
         }
-        assert!(!data.is_empty(), "audio stream must found");
-        assert!(!data[0].is_empty(), "packets must not be empty");
         Self { reader, data }
     }
 
