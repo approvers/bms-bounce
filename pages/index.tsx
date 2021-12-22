@@ -36,7 +36,7 @@ const decodeAudio = async (
     const { OggDecoder } = await import("../ogg-wasm/pkg/ogg_wasm");
     const buf = new Uint8Array(await file.arrayBuffer());
     const decoder = new OggDecoder(buf);
-    const channels: Float64Array[] = [];
+    const channels: Float32Array[] = [];
     while (true) {
       const channel = decoder.read_next_channel();
       if (!channel) {
