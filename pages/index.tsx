@@ -44,6 +44,9 @@ const decodeAudio = async (
       }
       channels.push(channel);
     }
+    if (channels.length === 0 || channels[0].length === 0) {
+      throw new Error(`ogg audio is empty: ${buf}`);
+    }
     const ret = ctx.createBuffer(
       channels.length,
       channels[0].length,
