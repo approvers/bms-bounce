@@ -129,6 +129,7 @@ const fileHandler =
         );
       } catch (e) {
         console.error(e);
+        setLoadingName("");
       } finally {
         setBouncing(false);
       }
