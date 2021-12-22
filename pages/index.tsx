@@ -34,8 +34,8 @@ const decodeAudio = async (
   }
   if (filename.endsWith(".ogg")) {
     const { OggDecoder } = await import("../ogg-wasm/pkg/ogg_wasm");
-    const buf = await file.arrayBuffer();
-    const decoder = new OggDecoder(new Uint8Array(buf));
+    const buf = new Uint8Array(await file.arrayBuffer());
+    const decoder = new OggDecoder(buf);
     const channels: Float64Array[] = [];
     while (true) {
       const channel = decoder.read_next_channel();
@@ -70,13 +70,15 @@ const bounce = async (
   const ctx = new AudioContext();
   const audioCache: Record<string, AudioBuffer> = {};
   await Promise.all(
-    Object.entries(files).map(async ([filename, file]) => {
-      if (isAudioFilename(filename) && !audioCache[filename]) {
+    Object.entries(files)
+      .filter(
+        ([filename]) => isAudioFilename(filename) && !audioCache[filename],
+      )
+      .map(async ([filename, file]) => {
         const audio = await decodeAudio(ctx, filename, file);
         bms.add_audio_length(filename, audio.duration);
         audioCache[filename] = audio;
-      }
-    }),
+      }),
   );
 
   nameView("変換中");
