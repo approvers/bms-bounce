@@ -14,11 +14,14 @@ impl OggDecoder {
     pub fn new(blob: Box<[u8]>) -> Self {
         let buf_reader = Cursor::new(blob);
         let mut reader = OggStreamReader::new(buf_reader).expect("failed to read ogg blob");
-        let mut data = reader
-            .read_dec_packet()
-            .expect("failed to read packet")
-            .expect("audio stream not found");
-        data.reverse();
+        let mut data = vec![vec![]; reader.ident_hdr.audio_channels as usize];
+        while let Some(packet) = reader.read_dec_packet().expect("failed to read packet") {
+            data.iter_mut()
+                .zip(packet.into_iter())
+                .for_each(|(data, mut packet)| data.append(&mut packet));
+        }
+        assert!(!data.is_empty(), "audio stream must found");
+        assert!(!data[0].is_empty(), "packets must not be empty");
         Self { reader, data }
     }
 
