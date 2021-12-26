@@ -7,7 +7,7 @@
   "scripts": {
     "predev": "yarn wasm",
     "dev": "next",
-    "wasm": "wasm-pack build bms-rs-wasm && wasm-pack build ogg-wasm",
+    "wasm": "wasm-pack build bms-rs-wasm",
     "prebuild": "yarn wasm",
     "build": "next build",
     "start": "next start",

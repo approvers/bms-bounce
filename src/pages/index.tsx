@@ -33,27 +33,26 @@ const decodeAudio = async (
     return await ctx.decodeAudioData(await file.arrayBuffer());
   }
   if (filename.endsWith(".ogg")) {
-    const { OggDecoder } = await import("../ogg-wasm/pkg/ogg_wasm");
-    const buf = new Uint8Array(await file.arrayBuffer());
-    const decoder = new OggDecoder(buf);
-    const channels: Float32Array[] = [];
-    while (true) {
-      const channel = decoder.read_next_channel();
-      if (!channel) {
-        break;
-      }
-      channels.push(channel);
-    }
-    if (channels.length === 0 || channels[0].length === 0) {
-      throw new Error(`ogg audio is empty: ${buf}`);
-    }
-    const ret = ctx.createBuffer(
-      decoder.num_of_channels(),
-      channels[0].length,
-      decoder.sample_rate(),
+    const url = URL.createObjectURL(file);
+    const audio = new Audio(url);
+    const source = ctx.createMediaElementSource(audio);
+    await ctx.audioWorklet.addModule("ogg-reader.js");
+    const array = [[], []];
+    const reader = new AudioWorkletNode(ctx, "ogg-reader", {
+      processorOptions: {
+        array,
+      },
+    });
+    source.connect(reader);
+    await new Promise((resolve) => {
+      reader.onprocessorerror = resolve;
+      audio.play();
+    });
+    const buf = ctx.createBuffer(2, array[0].length, 44100);
+    array.forEach((channel, i) =>
+      buf.copyToChannel(Float32Array.from(channel), i),
     );
-    channels.forEach((arr, i) => ret.getChannelData(i).set(arr));
-    return ret;
+    return buf;
   }
   throw new Error("unreachable");
 };
@@ -66,7 +65,7 @@ const bounce = async (
 ) => {
   nameView("WAV 読込中");
   const { BmsData, RandomConfig } = await import(
-    "../bms-rs-wasm/pkg/bms_rs_wasm"
+    "../../bms-rs-wasm/pkg/bms_rs_wasm"
   );
   const bms = new BmsData(source, new RandomConfig(true));
 
