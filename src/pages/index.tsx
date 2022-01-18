@@ -70,16 +70,17 @@ const bounce = async (
   const bms = new BmsData(source, new RandomConfig(true));
 
   const ctx = new AudioContext();
-  const audioCache: Record<string, AudioBuffer> = {};
+  const audioBuffers: Record<string, AudioBuffer> = {};
   await Promise.all(
     Object.entries(files)
-      .filter(
-        ([filename]) => isAudioFilename(filename) && !audioCache[filename],
-      )
+      .filter(([filename]) => isAudioFilename(filename))
       .map(async ([filename, file]) => {
         const audio = await decodeAudio(ctx, filename, file);
+        if (audioBuffers[filename]) {
+          return;
+        }
         bms.add_audio_length(filename, audio.duration);
-        audioCache[filename] = audio;
+        audioBuffers[filename] = audio;
       }),
   );
 
@@ -88,7 +89,7 @@ const bounce = async (
   const buf = ctx.createBuffer(2, lengthSeconds * sampleRate, sampleRate);
   const audioSeconds: [string, number][] = bms.audio_play_seconds();
   for (const [filename, seconds] of audioSeconds) {
-    const audio = audioCache[filename];
+    const audio = audioBuffers[filename];
     writeBuffer(audio, buf, secondsToIndex(seconds));
   }
   nameView("変換完了");
