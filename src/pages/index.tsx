@@ -118,21 +118,22 @@ const fileHandler =
   (setBouncing: (v: boolean) => void, setLoadingName: (v: string) => void) =>
   async (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (4 < files.length) {
-      setBouncing(true);
-      const soundFiles: Record<string, Blob> = extractSoundFiles(files);
-      const bms: File = files[firstBmsIndex(files)];
-      const bmsSource = await bms.text();
-      try {
-        await bounce(bmsSource, bms.name, soundFiles, (name) =>
-          setLoadingName(name),
-        );
-      } catch (e) {
-        console.error(e);
-        setLoadingName("");
-      } finally {
-        setBouncing(false);
-      }
+    if (files.length <= 4) {
+      return;
+    }
+    setBouncing(true);
+    const soundFiles: Record<string, Blob> = extractSoundFiles(files);
+    const bms: File = files[firstBmsIndex(files)];
+    const bmsSource = await bms.text();
+    try {
+      await bounce(bmsSource, bms.name, soundFiles, (name) =>
+        setLoadingName(name),
+      );
+    } catch (e) {
+      console.error(e);
+      setLoadingName("");
+    } finally {
+      setBouncing(false);
     }
   };
 
