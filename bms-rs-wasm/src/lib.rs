@@ -2,7 +2,7 @@
 mod tests;
 
 use bms_rs::{
-    lex::parse,
+    lex::{command::ObjId, parse},
     parse::{
         notes::BpmChangeObj,
         obj::{Obj, ObjTime},
@@ -65,20 +65,7 @@ impl BmsData {
 
 impl BmsData {
     fn process_notes(&self) -> impl Iterator<Item = (&'_ str, f64)> + '_ {
-        let mut current_section_time = 0.0;
-        let mut next_section_time = 0.0;
-        let mut previous_section = 0;
-        const DEFAULT_BPM: f64 = 130.0; // Defined on the BMS specification.
-        let mut current_bpm = self.bms.header.bpm.unwrap_or(DEFAULT_BPM);
-
         let notes = &self.bms.notes;
-        let bpm_changes = notes.bpm_changes();
-        let section_len_changes = notes.section_len_changes();
-        if let Some((_, &BpmChangeObj { bpm: first_bpm, .. })) =
-            bpm_changes.range(..ObjTime::new(2, 0, 4)).next()
-        {
-            current_bpm = first_bpm;
-        }
         notes
             .bgms()
             .iter()
@@ -89,37 +76,57 @@ impl BmsData {
                     .map(|&Obj { offset, obj, .. }| (offset, obj)),
             )
             .sorted_by(|a, b| a.0.cmp(&b.0))
-            .map(move |(offset, obj)| {
-                let ObjTime {
-                    track,
-                    numerator,
-                    denominator,
-                } = offset;
-                let filename = self.bms.header.wav_files[&obj]
-                    .file_name()
-                    .expect("not a file name specified in #WAV")
-                    .to_str()
-                    .unwrap();
-                let current_section_len = section_len_changes
-                    .get(&offset)
-                    .map_or(1.0, |obj| obj.length);
-                let sections_beats = 4.0 * current_section_len;
-                let seconds_per_beat = 60.0 / current_bpm;
-                let section_seconds = sections_beats * seconds_per_beat;
-                if previous_section < track {
-                    current_section_time = next_section_time;
-                    previous_section = track;
-                }
-                let obj_offset_seconds = section_seconds * numerator as f64 / denominator as f64;
-                let obj_start_seconds = current_section_time + obj_offset_seconds;
-                next_section_time = current_section_time + section_seconds;
-                if let Some((_, &BpmChangeObj { bpm: first_bpm, .. })) =
-                    bpm_changes.range(offset..).next()
-                {
-                    current_bpm = first_bpm;
-                }
-                (filename, obj_start_seconds)
-            })
+            .map(self.note_time_calculator())
+    }
+
+    fn note_time_calculator<'a>(&'a self) -> impl FnMut((ObjTime, ObjId)) -> (&'a str, f64) {
+        let notes = &self.bms.notes;
+        let bpm_changes = notes.bpm_changes();
+        let section_len_changes = notes.section_len_changes();
+
+        const DEFAULT_BPM: f64 = 130.0; // Defined on the BMS specification.
+        let mut current_bpm = self.bms.header.bpm.unwrap_or(DEFAULT_BPM);
+        let mut current_section_time = 0.0;
+        let mut next_section_time = 0.0;
+        let mut previous_section = 0;
+
+        if let Some((_, &BpmChangeObj { bpm: first_bpm, .. })) =
+            bpm_changes.range(..ObjTime::new(2, 0, 4)).next()
+        {
+            current_bpm = first_bpm;
+        }
+
+        move |(offset, obj)| {
+            let ObjTime {
+                track,
+                numerator,
+                denominator,
+            } = offset;
+            let filename = self.bms.header.wav_files[&obj]
+                .file_name()
+                .expect("not a file name specified in #WAV")
+                .to_str()
+                .unwrap();
+            let current_section_len = section_len_changes
+                .get(&offset)
+                .map_or(1.0, |obj| obj.length);
+            let sections_beats = 4.0 * current_section_len;
+            let seconds_per_beat = 60.0 / current_bpm;
+            let section_seconds = sections_beats * seconds_per_beat;
+            if previous_section < track {
+                current_section_time = next_section_time;
+                previous_section = track;
+            }
+            let obj_offset_seconds = section_seconds * numerator as f64 / denominator as f64;
+            let obj_start_seconds = current_section_time + obj_offset_seconds;
+            next_section_time = current_section_time + section_seconds;
+            if let Some((_, &BpmChangeObj { bpm: first_bpm, .. })) =
+                bpm_changes.range(offset..).next()
+            {
+                current_bpm = first_bpm;
+            }
+            (filename, obj_start_seconds)
+        }
     }
 }
 
